@@ -118,6 +118,23 @@ app.patch('/events/:id', async (req, res) => {
   }
 });
 
+// DELETE /events/:id - delete an event by its ID
+app.delete('/events/:id', async (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const result = await socialEventCollection.deleteOne({ _id: new ObjectId(id) });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ message: 'Event not found.' });
+    }
+
+    res.send({ message: 'Event deleted successfully.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: 'Failed to delete event.' });
+  }
+});
 
 
 // Start Server
