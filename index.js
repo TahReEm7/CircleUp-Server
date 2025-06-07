@@ -90,33 +90,48 @@ app.get('/events/:id', async (req, res) => {
   }
 });
 
-// PATCH /events/:id - add user email to attendees array
 app.patch('/events/:id', async (req, res) => {
   const id = req.params.id;
-  const { email } = req.body;
+  const { email, ...updateFields } = req.body;
 
-  if (!email) {
-    return res.status(400).send({ message: 'Email is required to join the event.' });
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'Invalid event ID' });
   }
 
   try {
-    // Add the email to attendees array if not already present
-    const updateResult = await socialEventCollection.updateOne(
-      { _id: new ObjectId(id), attendees: { $ne: email } }, // Only add if not present
-      { $push: { attendees: email } }
-    );
+    if (email) {
+      // Handle joining event
+      const updateResult = await socialEventCollection.updateOne(
+        { _id: new ObjectId(id), attendees: { $ne: email } },
+        { $push: { attendees: email } }
+      );
 
-    if (updateResult.modifiedCount === 0) {
-      // Email was already in attendees or event not found
-      return res.status(400).send({ message: 'You have already joined or event not found.' });
+      if (updateResult.modifiedCount === 0) {
+        return res.status(400).send({ message: 'You have already joined or event not found.' });
+      }
+
+      return res.send({ message: 'Successfully joined the event.' });
+    } else if (Object.keys(updateFields).length > 0) {
+      // Handle event data update
+      const result = await socialEventCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updateFields }
+      );
+
+      if (result.matchedCount === 0) {
+        return res.status(404).json({ message: 'Event not found' });
+      }
+
+      return res.status(200).json({ message: 'Event updated successfully' });
+    } else {
+      return res.status(400).json({ message: 'No valid update fields provided' });
     }
-
-    res.send({ message: 'Successfully joined the event.' });
   } catch (err) {
-    console.error(err);
-    res.status(500).send({ message: 'Failed to join event.' });
+    console.error('PATCH error:', err);
+    return res.status(500).json({ message: 'Server error while updating event' });
   }
 });
+
 
 // DELETE /events/:id - delete an event by its ID
 app.delete('/events/:id', async (req, res) => {
