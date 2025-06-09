@@ -22,6 +22,52 @@ const client = new MongoClient(uri, {
   }
 });
 
+const admin = require("firebase-admin");
+
+const serviceAccount = require("./circleup-firebase-admin.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+// Middleware to verify Firebase ID token from Authorization header
+const verifyToken = (req, res, next) => {
+  const token = req?.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: 'unauthorized access' })
+  }
+  jwt.verify(token, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: 'unauthorized access' })
+    }
+    req.decoded = decoded;
+    next();
+  })
+
+}
+
+const verifyFirebaseToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers?.authorization;
+
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).send({ message: "unauthorized access" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const userInfo = await admin.auth().verifyIdToken(token);
+    console.log("✅ Verified Firebase user:", userInfo);
+
+    req.tokenEmail = userInfo.email;
+    next();
+  } catch (err) {
+    console.error("❌ Firebase token verification failed:", err);
+    return res.status(401).send({ message: "invalid or expired token" });
+  }
+};
+
+
+
 // Global Collection
 let socialEventCollection;
 
@@ -47,7 +93,7 @@ app.get('/', (req, res) => {
 
 
 // Add new event
-app.post('/events', async (req, res) => {
+app.post('/events',verifyFirebaseToken, async (req, res) => {
   const event = req.body;
   try {
     const result = await socialEventCollection.insertOne({
@@ -90,7 +136,7 @@ app.get('/events/:id', async (req, res) => {
   }
 });
 
-app.patch('/events/:id', async (req, res) => {
+app.patch('/events/:id',verifyFirebaseToken , async (req, res) => {
   const id = req.params.id;
   const { email, ...updateFields } = req.body;
 
@@ -134,7 +180,7 @@ app.patch('/events/:id', async (req, res) => {
 
 
 // DELETE /events/:id - delete an event by its ID
-app.delete('/events/:id', async (req, res) => {
+app.delete('/events/:id',verifyFirebaseToken , async (req, res) => {
   const id = req.params.id;
 
   try {
@@ -150,6 +196,9 @@ app.delete('/events/:id', async (req, res) => {
     res.status(500).send({ message: 'Failed to delete event.' });
   }
 });
+
+
+
 
 
 // Start Server
