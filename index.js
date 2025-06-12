@@ -111,7 +111,23 @@ app.post('/events',verifyFirebaseToken, async (req, res) => {
 // Get all events
 app.get('/events', async (req, res) => {
   try {
-    const events = await socialEventCollection.find().toArray();
+    const { search, eventType } = req.query;
+
+    const query = {
+      status: 'upcoming'  // Only return upcoming events
+    };
+
+    // 🔍 Search by title
+    if (search) {
+      query.title = { $regex: search, $options: 'i' };
+    }
+
+    // 🏷️ Filter by eventType
+    if (eventType && eventType !== 'All') {
+      query.eventType = eventType;
+    }
+
+    const events = await socialEventCollection.find(query).toArray();
     res.json(events);
   } catch (err) {
     console.error(err);
@@ -175,6 +191,32 @@ app.patch('/events/:id',verifyFirebaseToken , async (req, res) => {
   } catch (err) {
     console.error('PATCH error:', err);
     return res.status(500).json({ message: 'Server error while updating event' });
+  }
+});
+
+// Cancel event participation
+app.patch('/events/:id/cancel', verifyFirebaseToken, async (req, res) => {
+  const id = req.params.id;
+  const { email } = req.body;
+
+  if (!ObjectId.isValid(id) || !email) {
+    return res.status(400).json({ message: 'Invalid request' });
+  }
+
+  try {
+    const result = await socialEventCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $pull: { attendees: email } }
+    );
+
+    if (result.modifiedCount === 0) {
+      return res.status(400).send({ message: 'Event not found or email was not an attendee.' });
+    }
+
+    res.send({ message: 'Successfully removed attendee from event.' });
+  } catch (err) {
+    console.error('❌ Failed to cancel join:', err);
+    res.status(500).send({ message: 'Internal server error' });
   }
 });
 
