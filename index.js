@@ -24,7 +24,8 @@ const client = new MongoClient(uri, {
 
 const admin = require("firebase-admin");
 
-const serviceAccount = require("./circleup-firebase-admin.json");
+const decoded = Buffer.from(process.env.FIREBASE_KEY_BASE64, 'base64').toString('utf8');
+const serviceAccount = JSON.parse(decoded);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
