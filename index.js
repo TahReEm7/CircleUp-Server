@@ -153,7 +153,7 @@ app.get('/events/:id', async (req, res) => {
   }
 });
 
-app.patch('/events/:id',verifyFirebaseToken , async (req, res) => {
+app.patch('/events/:id' , async (req, res) => {
   const id = req.params.id;
   const { email, ...updateFields } = req.body;
 
@@ -245,6 +245,6 @@ app.delete('/events/:id',verifyFirebaseToken , async (req, res) => {
 
 
 // Start Server
-app.listen(port, () => {
-  console.log(`🚀 Server running at http://localhost:${port}`);
-});
+// app.listen(port, () => {
+//   console.log(`🚀 Server running at http://localhost:${port}`);
+// });
