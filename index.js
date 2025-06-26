@@ -32,20 +32,20 @@ admin.initializeApp({
 });
 
 // Middleware to verify Firebase ID token from Authorization header
-const verifyToken = (req, res, next) => {
-  const token = req?.cookies?.token;
-  if (!token) {
-    return res.status(401).send({ message: 'unauthorized access' })
-  }
-  jwt.verify(token, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).send({ message: 'unauthorized access' })
-    }
-    req.decoded = decoded;
-    next();
-  })
+// const verifyToken = (req, res, next) => {
+//   const token = req?.cookies?.token;
+//   if (!token) {
+//     return res.status(401).send({ message: 'unauthorized access' })
+//   }
+//   jwt.verify(token, process.env.JWT_ACCESS_SECRET, (err, decoded) => {
+//     if (err) {
+//       return res.status(401).send({ message: 'unauthorized access' })
+//     }
+//     req.decoded = decoded;
+//     next();
+//   })
 
-}
+// }
 
 const verifyFirebaseToken = async (req, res, next) => {
   try {
@@ -74,7 +74,6 @@ let socialEventCollection;
 
 async function run() {
   try {
-    await client.connect();
     const db = client.db(process.env.MONGO_DB);
     socialEventCollection = db.collection("events");
     console.log("✅ Connected to MongoDB");
@@ -112,6 +111,8 @@ app.post('/events',verifyFirebaseToken, async (req, res) => {
 // Get all events
 app.get('/events', async (req, res) => {
   try {
+    const db = client.db(process.env.MONGO_DB);
+    socialEventCollection = db.collection("events");
     const { search, eventType } = req.query;
 
     const query = {

@@ -2,5 +2,4 @@ node_modules
 .env
 circleup-firebase-admin.json
 KeyConverted.js
-
 .vercel
